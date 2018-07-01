@@ -571,15 +571,17 @@ has_tight_type(p::Pair) =
 
 isdelimited(io::IO, x) = true
 
-isdelimited(io::IO, p::Pair) = !has_tight_type(p)
+# !isdelimited means that the Pair is printed with "=>" (like in "1 => 2"),
+# without its explicit type (like in "Pair{Integer,Integer}(1, 2)")
+isdelimited(io::IO, p::Pair) = !(has_tight_type(p) || get(io, :typeinfo, Any) == typeof(p))
 
 function show(io::IO, p::Pair)
     compact = get(io, :compact, false)
     iocompact = IOContext(io, :compact => get(io, :compact, true))
-    has_tight_type(p) || return show_default(iocompact, p)
+    isdelimited(io, p) && return show_default(iocompact, p)
 
     typeinfo = get(io, :typeinfo, Any)
-    typeinfos = typeinfo <: Pair && p isa typeinfo ?
+    typeinfos = p isa typeinfo <: Pair ?
         (fieldtype(typeinfo, 1), fieldtype(typeinfo, 2)) : (Any, Any)
 
     isdelimited(iocompact, p.first) || print(io, "(")
